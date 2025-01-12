@@ -1,0 +1,9 @@
+{
+    "id": "obsidian-same-tab",
+    "name": "Same Tab",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "在同一个标签页中查看和编辑笔记",
+    "author": "Your Name",
+    "isDesktopOnly": false
+} 

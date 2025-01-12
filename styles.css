@@ -1,0 +1,12 @@
+.same-tab-editor-container {
+    height: 100%;
+    padding: 0 16px;
+}
+
+.same-tab-editor-container .cm-editor {
+    height: 100%;
+}
+
+.same-tab-editor-container .cm-scroller {
+    padding: 16px 0;
+} 
