@@ -116,7 +116,7 @@ export default class SameTabPlugin extends Plugin {
             });
 
             // 显示视图但不聚焦
-            workspace.revealLeaf(leaf, { focus: false });
+            workspace.revealLeaf(leaf);
 
             // 初始化内容
             const currentFile = this.app.workspace.getActiveFile();
