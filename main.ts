@@ -1,12 +1,8 @@
-import { Plugin, WorkspaceLeaf, ItemView, TFile, MarkdownView } from 'obsidian';
-import 'tslib';
+import { Plugin, WorkspaceLeaf, TFile, MarkdownView } from 'obsidian';
 
 const VIEW_TYPE_SAME_TAB = "same-tab-view";
 
-class SameTabView extends ItemView {
-    private titleEl: HTMLElement;
-    private mdView: MarkdownView;
-
+class SameTabView extends MarkdownView {
     constructor(leaf: WorkspaceLeaf) {
         super(leaf);
     }
@@ -22,68 +18,34 @@ class SameTabView extends ItemView {
     getIcon() {
         return "leafy-green";
     }
-
-    override async onOpen() {
-        const container = this.containerEl.children[1];
-        container.empty();
-
-        // 创建标题容器
-        this.titleEl = container.createEl('div', {
-            cls: 'same-tab-title'
-        });
-
-        // 创建 MarkdownView
-        this.mdView = new MarkdownView(this.leaf);
-        this.mdView.containerEl.style.display = 'block';
-        container.appendChild(this.mdView.containerEl);
-    }
-
-    // 更新内容
-    async updateContent(file: TFile) {
-        if (file && file.extension === 'md') {
-            // 更新标题
-            this.titleEl.setText(file.basename);
-            
-            // 使用 MarkdownView 加载文件，但不激活它
-            await this.mdView.leaf.openFile(file, { active: false });
-            
-            // 确保主编辑器保持焦点
-            const activeLeaf = this.app.workspace.getLeaf();
-            if (activeLeaf) {
-                this.app.workspace.setActiveLeaf(activeLeaf, { focus: true });
-            }
-        } else {
-            this.titleEl.setText('');
-            this.mdView.clear();
-        }
-    }
-
-    override async onClose() {
-        this.mdView.containerEl.detach();
-    }
 }
 
 export default class SameTabPlugin extends Plugin {
     private view: SameTabView;
+    private leaf: WorkspaceLeaf | null = null;
 
     async onload() {
         // 注册视图
         this.registerView(
             VIEW_TYPE_SAME_TAB,
-            (leaf) => (this.view = new SameTabView(leaf))
+            (leaf) => {
+                this.leaf = leaf;
+                return (this.view = new SameTabView(leaf));
+            }
         );
 
-        // 监听文件打开事件
+        // 监听活动叶子变化
         this.registerEvent(
-            this.app.workspace.on('file-open', async (file) => {
-                if (this.view && file) {
-                    await this.view.updateContent(file);
+            this.app.workspace.on('active-leaf-change', async (leaf) => {
+                if (this.view && leaf?.view instanceof MarkdownView) {
+                    const file = leaf.view.file;
+                    // 只处理 markdown 文件
+                    if (file && file.extension === 'md') {
+                        await this.view.leaf.openFile(file, { active: false });
+                    }
                 }
             })
         );
-
-        // 添加样式
-        this.addStyle();
 
         // 插件加载时自动创建视图
         this.app.workspace.onLayoutReady(() => {
@@ -91,42 +53,37 @@ export default class SameTabPlugin extends Plugin {
         });
     }
 
-    private addStyle() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .same-tab-title {
-                padding: 10px 20px;
-                font-size: 1.2em;
-                font-weight: bold;
-                border-bottom: 1px solid var(--background-modifier-border);
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    async initView() {
-        const { workspace } = this.app;
-        
-        // 在右侧创建视图，但不激活它
-        const leaf = workspace.getRightLeaf(false);
-        if (leaf) {
-            await leaf.setViewState({
-                type: VIEW_TYPE_SAME_TAB,
-                active: false,  // 设置为 false，防止自动激活
-            });
-
-            // 显示视图但不聚焦
-            workspace.revealLeaf(leaf);
-
-            // 初始化内容
-            const currentFile = this.app.workspace.getActiveFile();
-            if (currentFile && this.view) {
-                await this.view.updateContent(currentFile);
-            }
+    async onunload() {
+        // 使用保存的 leaf 引用来关闭视图
+        if (this.leaf) {
+            await this.leaf.detach();
+            this.leaf = null;
         }
     }
 
-    async onunload() {
-        this.app.workspace.detachLeavesOfType(VIEW_TYPE_SAME_TAB);
+    async initView() {
+        // 如果已经有视图，先关闭它
+        if (this.leaf) {
+            await this.leaf.detach();
+            this.leaf = null;
+        }
+
+        // 创建新视图
+        this.leaf = this.app.workspace.getRightLeaf(false);
+        if (this.leaf) {
+            await this.leaf.setViewState({
+                type: VIEW_TYPE_SAME_TAB,
+                active: false,
+            });
+
+            // 显示视图
+            this.app.workspace.revealLeaf(this.leaf);
+
+            // 初始化内容
+            const currentFile = this.app.workspace.getActiveFile();
+            if (currentFile && this.view && currentFile.extension === 'md') {
+                await this.view.leaf.openFile(currentFile, { active: false });
+            }
+        }
     }
 } 

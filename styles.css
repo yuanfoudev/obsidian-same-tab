@@ -9,4 +9,13 @@
 
 .same-tab-editor-container .cm-scroller {
     padding: 16px 0;
+}
+
+/* 自定义视图面板的样式 */
+.workspace-leaf-content[data-type="same-tab-view"] .view-header {
+    /* 自定义标题栏样式 */
+}
+
+.workspace-leaf-content[data-type="same-tab-view"] .view-content {
+    /* 自定义内容区域样式 */
 } 
